@@ -24,7 +24,7 @@ public class Fluid : MonoBehaviour
     private int[] adress;
     private Vector2Int gridSize;
     public float[] densities;
-    private Vector2 boundingBox = new Vector2(4,4), boundingBoxPos = Vector2.zero;
+    private Vector2 boundingBox = new Vector2(16,16), boundingBoxPos = Vector2.zero;
     public int count, particleTracker;
     public float damping = 0F, spacing, influenceRadius = 0.5F, mass = 1, targetDensity, pressureMultiplier, viscosityMultiplier, interactionMultiplier, interactionRadius, cellSize = 1;
 
@@ -32,8 +32,7 @@ public class Fluid : MonoBehaviour
         get { return boundingBox; }
         set {
             boundingBox = value;
-            gridSize = new Vector2Int((int)Ceiling(BoundingBox.x / cellSize), (int)Ceiling(BoundingBox.y / cellSize));
-            adress = new int[gridSize.x * gridSize.y];
+            ResetGrid();
         }
     }
 
@@ -41,10 +40,7 @@ public class Fluid : MonoBehaviour
     void Start()
     {
         AddParticles(count, spacing, startPos);
-
-        cellSize = influenceRadius * 2;
-        gridSize = new Vector2Int((int)Ceiling(BoundingBox.x / cellSize), (int)Ceiling(BoundingBox.y / cellSize));
-        adress = new int[gridSize.x * gridSize.y];
+        ResetGrid();
     }
 
     // Update is called once per frame
@@ -290,5 +286,11 @@ public class Fluid : MonoBehaviour
         }
 
         return result;
+    }
+
+    private void ResetGrid() {
+        cellSize = influenceRadius * 2;
+        gridSize = new Vector2Int((int)Ceiling(BoundingBox.x / cellSize), (int)Ceiling(BoundingBox.y / cellSize));
+        adress = new int[gridSize.x * gridSize.y];
     }
 }

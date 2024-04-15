@@ -52,5 +52,5 @@
         "Temp/": true
     },
     "dotnet.preferCSharpExtension": true,
-    "dotnet.defaultSolution": "water.sln"
+    "dotnet.defaultSolution": "fluid.sln"
 }
