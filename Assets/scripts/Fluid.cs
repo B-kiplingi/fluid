@@ -289,7 +289,7 @@ public class Fluid : MonoBehaviour
     }
 
     private void ResetGrid() {
-        cellSize = influenceRadius * 2;
+        cellSize = influenceRadius;
         gridSize = new Vector2Int((int)Ceiling(BoundingBox.x / cellSize), (int)Ceiling(BoundingBox.y / cellSize));
         adress = new int[gridSize.x * gridSize.y];
     }
