@@ -1,57 +1,83 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class Controls : MonoBehaviour
 {
     public Fluid fluid;
-    public Slider gravityX, gravityY, pressureMultiplier, viscositiMultiplier, influenceRadius, targetDensity, mass, interactionForce, interactionRadius;
-    // Start is called before the first frame update
-    void Start()
-    {
-        
+    public void OnPressureMultiplierChange(string text) {
+        if(!string.IsNullOrWhiteSpace(text))
+            fluid.PressureMultiplier = float.Parse(text);
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+    public void OnViscoisitiMultiplierChange(string text) {
+        if(!string.IsNullOrWhiteSpace(text))
+            fluid.ViscosityMultiplier = float.Parse(text);
     }
 
-    public void OnGravityXChange() {
-        fluid.gravity.x = gravityX.value;
+    public void OnTargetDensityChange(string text) {
+        if(!string.IsNullOrWhiteSpace(text))
+            fluid.TargetDensity = float.Parse(text);
     }
 
-    public void OnGravityYChange() {
-        fluid.gravity.y = gravityY.value;
+    public void OnInfluenceRadiusChange(string text) {
+        if(!string.IsNullOrWhiteSpace(text))
+            fluid.InfluenceRadius = float.Parse(text);
     }
 
-    public void OnPressureMultiplierChange() {
-        fluid.pressureMultiplier = pressureMultiplier.value;
+    public void OnMassChange(string text) {
+        if(!string.IsNullOrWhiteSpace(text))
+            fluid.Mass = float.Parse(text);
     }
 
-    public void OnViscoisitiMultiplierChange() {
-        fluid.viscosityMultiplier = viscositiMultiplier.value;
+    public void OnInteractionForceChange(string text) {
+        if(!string.IsNullOrWhiteSpace(text))
+            fluid.InteractionMultiplier = float.Parse(text);
     }
 
-    public void OnInfluenceRadiusChange() {
-        fluid.influenceRadius = influenceRadius.value;
+    public void OnInteractionRadiusChange(string text) {
+        if(!string.IsNullOrWhiteSpace(text))
+            fluid.InteractionRadius = float.Parse(text);
     }
 
-    public void OnTargetDensityChange() {
-        fluid.targetDensity = targetDensity.value;
+    public void OnGravityXChange(string text) {
+        if(!string.IsNullOrWhiteSpace(text))
+            fluid.gravity.x = float.Parse(text);
     }
 
-    public void OnMassChange() {
-        fluid.mass = mass.value;
+    public void OnGravityYChange(string text) {
+        if(!string.IsNullOrWhiteSpace(text))
+            fluid.gravity.y = float.Parse(text);
     }
 
-    public void OnInteractionForceChange() {
-        fluid.interactionMultiplier = interactionForce.value;
+    public void OnBoundingBoxSizeXChange(string text) {
+        if(!string.IsNullOrWhiteSpace(text))
+            fluid.BoundingBox = new Vector2(float.Parse(text), fluid.BoundingBox.y);
     }
 
-    public void OnInteractionRadiusChange() {
-        fluid.interactionRadius = interactionRadius.value;
+    public void OnBoundingBoxSizeYChange(string text) {
+        if(!string.IsNullOrWhiteSpace(text))
+            fluid.BoundingBox = new Vector2(fluid.BoundingBox.x, float.Parse(text));
+    }
+
+    public void OnBoundingBoxPosXChange(string text) {
+        if(!string.IsNullOrWhiteSpace(text))
+            fluid.BoundingBoxPos = new Vector2(float.Parse(text), fluid.BoundingBoxPos.y);
+    }
+
+    public void OnBoundingBoxPosYChange(string text) {
+        if(!string.IsNullOrWhiteSpace(text))
+            fluid.BoundingBoxPos = new Vector2(fluid.BoundingBoxPos.x, float.Parse(text));
+    }
+
+    public void OnParticleCountChange(string text) {
+        if(!string.IsNullOrWhiteSpace(text))
+            fluid.Count = int.Parse(text);
+    }
+
+    public void OnResetPressed() {
+        fluid.Reset();
     }
 }

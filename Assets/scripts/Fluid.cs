@@ -18,43 +18,90 @@ using static System.Math;
 public class Fluid : MonoBehaviour
 {
     public new Camera camera;
-    public Vector2 gravity = new Vector2(0, 0), startPos;
+    public Vector2 gravity = new(0, 0), startPos;
     private Vector2[] pos, predictedPos, velocity;
     private Particle[] cells;
     private int[] adress;
     private Vector2Int gridSize;
-    public float[] densities;
-    private Vector2 boundingBox = new Vector2(16,16), boundingBoxPos = Vector2.zero;
-    public int count, particleTracker;
-    public float damping = 0F, spacing, influenceRadius = 0.5F, mass = 1, targetDensity, pressureMultiplier, viscosityMultiplier, interactionMultiplier, interactionRadius, cellSize = 1;
+    private float[] densities;
+    private Vector2 boundingBox = new(16,16), boundingBoxPos = Vector2.zero;
+    private int count = 400;
+    private int particleTracker;
+    public float spacing;
+    private float cellSize, influenceRadius = 1.4F, damping, mass = 1, targetDensity = 3;
+    private bool resetGrid = false;
+    private float pressureMultiplier = 100;
+    private float viscosityMultiplier = 3;
+    private float interactionMultiplier = 20;
+    private float interactionRadius = 3;
 
     public Vector2 BoundingBox {
         get { return boundingBox; }
         set {
-            boundingBox = value;
-            ResetGrid();
+            if(value.x > 0 && value.y > 0) {
+                boundingBox = value;
+                resetGrid = true;
+                FixOutOfBounds();
+            }
         }
     }
+
+    public Vector2 BoundingBoxPos {
+        get { return boundingBoxPos; }
+        set {
+            boundingBoxPos = value;
+            resetGrid = true;
+            FixOutOfBounds();
+        }
+    }
+
+    public float InfluenceRadius {
+        get { return influenceRadius; }
+        set {
+            if(value > 0) {
+                influenceRadius = value;
+                resetGrid = true;
+            }
+        }
+    }
+
+    public float Damping { get => damping; set => damping = Clamp(value, 0, 1); }
+
+    public float Mass { get => mass; set { if(value > 0) mass = value;}}
+
+    public float TargetDensity { get => targetDensity; set { if(value > 0) targetDensity = value;}}
+    public float PressureMultiplier { get => pressureMultiplier; set => pressureMultiplier = value; }
+    public float ViscosityMultiplier { get => viscosityMultiplier; set => viscosityMultiplier = value; }
+    public float InteractionMultiplier { get => interactionMultiplier; set => interactionMultiplier = value; }
+    public float InteractionRadius { get => interactionRadius; set => interactionRadius = value; }
+    public int Count { get => count; set => count = Clamp(value, 0, 10000); }
 
     // Start is called before the first frame update
     void Start()
     {
-        AddParticles(count, spacing, startPos);
+        AddParticles(Count, spacing, startPos);
         ResetGrid();
     }
 
     // Update is called once per frame
     void Update()
     {
+        if(resetGrid) {
+            ResetGrid(); 
+            resetGrid = false;
+        }
         for(int i = 0; i < pos.Count(); i++) {
             predictedPos[i] = pos[i] + velocity[i] * 1F/30F;
-            predictedPos[i].x = Clamp(predictedPos[i].x, boundingBoxPos.x - (BoundingBox.x / 2), boundingBoxPos.x + (BoundingBox.x / 2));
-            predictedPos[i].y = Clamp(predictedPos[i].y, boundingBoxPos.y - (BoundingBox.y / 2), boundingBoxPos.y + (BoundingBox.y / 2));
+            predictedPos[i].x = Clamp(predictedPos[i].x, BoundingBoxPos.x - (BoundingBox.x / 2), BoundingBoxPos.x + (BoundingBox.x / 2));
+            predictedPos[i].y = Clamp(predictedPos[i].y, BoundingBoxPos.y - (BoundingBox.y / 2), BoundingBoxPos.y + (BoundingBox.y / 2));
         }
 
         // sort particles into cells
         for(int i = 0; i < pos.Count(); i++) {
             cells[i].cellId = Util.CellToId(WorldToGrid(predictedPos[cells[i].particleId]), gridSize);
+            if(!Util.CellInBounds(WorldToGrid(predictedPos[cells[i].particleId]), gridSize)){
+                Debug.Log("cell out of bounds");
+            }
         }
 
         Array.Sort(cells);
@@ -82,28 +129,23 @@ public class Fluid : MonoBehaviour
             Vector2 viscosityForce = viscosity / densities[id];
             Vector2 interactionForce = Vector2.zero;
             if(Input.GetMouseButton(0)) {
-                interactionForce = InteractionForce(camera.ScreenToWorldPoint(Input.mousePosition), interactionRadius, interactionMultiplier, id);
+                interactionForce = InteractionForce(camera.ScreenToWorldPoint(Input.mousePosition), InteractionRadius, InteractionMultiplier, id);
             }
             if(Input.GetMouseButton(1)) {
-                interactionForce = InteractionForce(camera.ScreenToWorldPoint(Input.mousePosition), interactionRadius, -interactionMultiplier, id);
+                interactionForce = InteractionForce(camera.ScreenToWorldPoint(Input.mousePosition), InteractionRadius, -InteractionMultiplier, id);
                 
             }
 
             velocity[id] += (pressureAcceleration + viscosityForce + gravity + interactionForce) * Time.deltaTime;
-            velocity[id] *= 1 - damping;
+            velocity[id] *= 1 - Damping;
             pos[id] += velocity[id] * Time.deltaTime;
+        }
 
-            if(Abs(pos[id].x - boundingBoxPos.x) > BoundingBox.x / 2) {
-                pos[id].x = BoundingBox.x / 2 * Sign(pos[id].x) + boundingBoxPos.x;
-                velocity[id].x *= -1;
-            }
-            if(Abs(pos[id].y - boundingBoxPos.y) > BoundingBox.y / 2) {
-                pos[id].y = BoundingBox.y / 2 * Sign(pos[id].y) + boundingBoxPos.y;
-                velocity[id].y *= -1;
-            }
+        FixOutOfBounds();
 
-            Draw.BoxOutline(boundingBoxPos, BoundingBox, 0.05F, Color.white, 1);
-            Draw.Point(pos[id], 0.05F, Color.blue);
+        for(int i = 0; i < cells.Count(); i++) {
+            Draw.BoxOutline(BoundingBoxPos, BoundingBox, 0.05F, Color.white, 1);
+            Draw.Point(pos[i], 0.05F, Color.blue);
         }
     }
 
@@ -156,7 +198,7 @@ public class Fluid : MonoBehaviour
             if (adress[cellId] == -1) continue;
             particleTracker = adress[cellId];
             while(cells.Count() > particleTracker && cells[particleTracker].cellId == cellId){
-                density += mass * SmoothingKernel((position - predictedPos[cells[particleTracker].particleId]).magnitude, influenceRadius);
+                density += Mass * SmoothingKernel((position - predictedPos[cells[particleTracker].particleId]).magnitude, InfluenceRadius);
 
                 particleTracker++;
             }
@@ -177,13 +219,13 @@ public class Fluid : MonoBehaviour
             while(cells.Count() > particleTracker && cells[particleTracker].cellId == cellId){
                 if(particleTracker == id) {particleTracker++; continue;}
                 float distance = (predictedPos[cells[id].particleId] - predictedPos[cells[particleTracker].particleId]).magnitude;
-                if(distance >= influenceRadius) {particleTracker++; continue;}
+                if(distance >= InfluenceRadius) {particleTracker++; continue;}
 
-                float slope = SmoothingKernelDerivative(distance, influenceRadius);
+                float slope = SmoothingKernelDerivative(distance, InfluenceRadius);
                 Vector2 direction = (predictedPos[cells[id].particleId] - predictedPos[cells[particleTracker].particleId]) / distance;
                 if(distance == 0) direction = RandomDirection();
                 float sharedPressure = (DensityToPressure(densities[cells[id].particleId]) + DensityToPressure(densities[cells[particleTracker].particleId])) / 2;
-                pressure += direction * sharedPressure * slope * mass / densities[cells[particleTracker].particleId];
+                pressure += direction * sharedPressure * slope * Mass / densities[cells[particleTracker].particleId];
 
                 particleTracker++;
             }
@@ -199,19 +241,19 @@ public class Fluid : MonoBehaviour
         for(int i = 0; i < pos.Count(); i ++){
             if(id == i) continue;
             float distance = (predictedPos[id] - predictedPos[i]).magnitude;
-            if(distance >= influenceRadius) continue;
+            if(distance >= InfluenceRadius) continue;
 
-            float slope = SmoothingKernelDerivative(distance, influenceRadius);
+            float slope = SmoothingKernelDerivative(distance, InfluenceRadius);
             Vector2 direction = (predictedPos[id] - predictedPos[i]) / distance;
             if(distance == 0) direction = RandomDirection();
             float sharedPressure = (DensityToPressure(densities[id]) + DensityToPressure(densities[i])) / 2;
-            pressure += direction * sharedPressure * slope * mass / densities[i];
+            pressure += direction * sharedPressure * slope * Mass / densities[i];
         }
         return pressure;
     }
 
     float DensityToPressure(float density) {
-        return (targetDensity - density) * pressureMultiplier;
+        return (TargetDensity - density) * PressureMultiplier;
     }
 
     Vector2 CalculateViscosityCells(int id) {
@@ -226,8 +268,8 @@ public class Fluid : MonoBehaviour
                 if(particleTracker == id) {particleTracker++; continue;}
                 float distance = (predictedPos[cells[id].particleId] - predictedPos[cells[particleTracker].particleId]).magnitude;
                 
-                float influence = ViscosityKernel(distance, influenceRadius);
-                viscosity += (velocity[cells[particleTracker].particleId] - velocity[cells[id].particleId]) * influence * viscosityMultiplier;
+                float influence = ViscosityKernel(distance, InfluenceRadius);
+                viscosity += (velocity[cells[particleTracker].particleId] - velocity[cells[id].particleId]) * influence * ViscosityMultiplier;
 
                 particleTracker++;
             }
@@ -242,8 +284,8 @@ public class Fluid : MonoBehaviour
             if(id == i) continue;
             float distance = (predictedPos[id] - predictedPos[i]).magnitude;
             
-            float influence = ViscosityKernel(distance, influenceRadius);
-            viscosity += (velocity[i] - velocity[id]) * influence * viscosityMultiplier;
+            float influence = ViscosityKernel(distance, InfluenceRadius);
+            viscosity += (velocity[i] - velocity[id]) * influence * ViscosityMultiplier;
         }
         return viscosity;
     }
@@ -267,8 +309,8 @@ public class Fluid : MonoBehaviour
 
     Vector2Int WorldToGrid(Vector2 pos){
         return new Vector2Int(
-            (int)Floor((pos.x - boundingBoxPos.x + (BoundingBox.x / 2)) / cellSize),
-            (int)Floor((pos.y - boundingBoxPos.y + (BoundingBox.x / 2)) / cellSize)
+            (int)Floor((pos.x - BoundingBoxPos.x + (BoundingBox.x / 2)) / cellSize),
+            (int)Floor((pos.y - BoundingBoxPos.y + (BoundingBox.y / 2)) / cellSize)
         );
     }
 
@@ -284,13 +326,29 @@ public class Fluid : MonoBehaviour
                 }
             }
         }
-
         return result;
     }
 
     private void ResetGrid() {
-        cellSize = influenceRadius;
-        gridSize = new Vector2Int((int)Ceiling(BoundingBox.x / cellSize), (int)Ceiling(BoundingBox.y / cellSize));
+        cellSize = InfluenceRadius;
+        gridSize = new Vector2Int((int)Ceiling(BoundingBox.x / cellSize + 1), (int)Ceiling(BoundingBox.y / cellSize + 1));
         adress = new int[gridSize.x * gridSize.y];
+    }
+
+    private void FixOutOfBounds() {
+        for(int i = 0; i < pos.Count(); i++) {
+            if(Abs(pos[i].x - BoundingBoxPos.x) > BoundingBox.x / 2) {
+                pos[i].x = BoundingBox.x / 2 * Sign(pos[i].x - BoundingBoxPos.x) + BoundingBoxPos.x;
+                velocity[i].x *= -1;
+            }
+            if(Abs(pos[i].y - BoundingBoxPos.y) > BoundingBox.y / 2) {
+                pos[i].y = BoundingBox.y / 2 * Sign(pos[i].y - BoundingBoxPos.y) + BoundingBoxPos.y;
+                velocity[i].y *= -1;
+            }
+        }
+    }
+
+    public void Reset() {
+        Start();
     }
 }
